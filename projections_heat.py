@@ -24,23 +24,21 @@ sys.path.append('/Users/peterpfleiderer/Documents/Projects/WB_DRM/')
 
 
 iso='GHA'
-GHA={'tas':{'RCP2.6':{'models':{}},'RCP8.5':{'models':{}}}, 'SPEI':{'RCP2.6':{'models':{}},'RCP8.5':{'models':{}}},'support':{}, 'rx5':{'RCP2.6':{'models':{}},'RCP8.5':{'models':{}}},'support':{}}
+GHA={'tas':{'rcp2p6':{'models':{}},'rcp8p5':{'models':{}}},'support':{}}
 
 GHA['support']['model_names']=[]
 GHA['support']['periods']={'ref':1985,'2030s':2024,'2040s':2034}
 
 GHA['support']['files']={}
 GHA['support']['files']['tas']=glob.glob('Projects/WB_DRM/country_data/climate_input/'+iso+'/raw/CMIP5/*/mon_tas*.nc4')
-GHA['support']['files']['SPEI']=glob.glob('Projects/WB_DRM/country_data/climate_input/'+iso+'/raw/CMIP5/*/spei*12m*.nc4')
-GHA['support']['files']['rx5']=glob.glob('Projects/WB_DRM/country_data/climate_input/'+iso+'/raw/CMIP5/*/mon_rx5*.nc4')
 
-for var in ['tas','SPEI','rx5']:
+for var in ['tas']:
 	for file in GHA['support']['files'][var]:
 		# interprete files
 		print file
 		for i in range(-6,-2):
 			if file.split('_')[i][0:3]=='rcp':
-				rcp=file.split('_')[i]
+				rcp=file.split('_')[i].replace('.','p')
 				model=file.split('_')[i-1]
 				break
 
@@ -67,7 +65,7 @@ for var in ['tas','SPEI','rx5']:
 		GHA[var][rcp]['models'][model]=np.ma.masked_invalid(nc_in.variables[var][:,:,:])
 
 	# ensemble mean
-	for rcp in ['RCP2.6','RCP8.5']:
+	for rcp in ['rcp2p6','rcp8p5']:
 		GHA[var][rcp]['ensemble_mean']=GHA[var][rcp]['models'][GHA[var][rcp]['models'].keys()[0]].copy()*0
 		for model in GHA['support']['model_names']:
 			GHA[var][rcp]['ensemble_mean']+=GHA[var][rcp]['models'][model]
@@ -77,26 +75,10 @@ for var in ['tas','SPEI','rx5']:
 # plot settings
 ###############
 lon=GHA['support']['lon'].copy()
-step=np.diff(lon,1)[0]
-lon-=step/2
-lon=np.append(lon,np.array(lon[-1]+step))
-
 lat=GHA['support']['lat'].copy()
-step=np.diff(lat,1)[0]
-lat-=step/2
-lat=np.append(lat,lat[-1]+step)
-
-lons, lats = np.meshgrid(lon,lat)
-
-fig,axes=plt.subplots(nrows=3,ncols=5,figsize=(7,6))
-ax,im=plot_map(axes[0,3],lons,lats,Z,color_type=month_color,color_range=[1,12],color_label=None,subtitle='')
-ax.set_aspect(1.)
-plt.show()
-#fig.tight_layout()
-plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
 
 rcp_names=['low warming','high warming']
-rcp_str=['RCP2.6','RCP8.5']
+rcp_str=['rcp2p6','rcp8p5']
 
 risk = make_colormap([col_conv('green'), col_conv('white'), 0.2, col_conv('white'), col_conv('yellow'), 0.4, col_conv('yellow'), col_conv('orange'), 0.6, col_conv('orange'), col_conv('red'), 0.8, col_conv('red'), col_conv('violet')])
 month_color = mpl.colors.ListedColormap(sns.color_palette("cubehelix", 12))
@@ -111,13 +93,13 @@ var='tas'
 GHA[var]['warm_season']={}
 GHA[var]['climatology']={}
 for model in GHA['support']['model_names']:
-	GHA[var]['climatology'][model]=GHA[var]['RCP2.6']['models'][model][0:12,:,:].copy()*0
+	GHA[var]['climatology'][model]=GHA[var]['rcp2p6']['models'][model][0:12,:,:].copy()*0
 	start_year=GHA['support']['periods']['ref']
 	for month in range(12):
 		relevant_time_indices=np.where((GHA['support']['year']>start_year) & (GHA['support']['year']<=start_year+20) & (GHA['support']['month']==month+1))[0]
 		for y in range(GHA[var]['climatology'][model].shape[1]):
 			for x in range(GHA[var]['climatology'][model].shape[2]):
-				GHA[var]['climatology'][model][month,y,x]=np.mean(GHA[var]['RCP2.6']['models'][model][relevant_time_indices,y,x])
+				GHA[var]['climatology'][model][month,y,x]=np.mean(GHA[var]['rcp2p6']['models'][model][relevant_time_indices,y,x])
 
 	GHA[var]['warm_season'][model]=np.argsort(GHA[var]['climatology'][model],axis=0,).astype(float)[-3:,:,:][::-1,:,:]+1
 	GHA[var]['warm_season'][model][np.isfinite(GHA[var]['climatology'][model][0:3,:,:])==False]=np.nan
@@ -131,7 +113,7 @@ if True:
 		for model in GHA['support']['model_names']:
 			Z=GHA[var]['warm_season'][model][mon,:,:].copy()
 			Z[Z==0]=np.nan
-			ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=plt.cm.YlOrBr,color_range=[1,5],color_label=None,subtitle='')
+			ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=plt.cm.YlOrBr,color_range=[1,5],color_label=None,subtitle='')
 			ax.set_title(model)
 			count+=1
 
@@ -147,14 +129,14 @@ if True:
 # define threshold
 GHA[var]['threshold']={}
 for model in GHA['support']['model_names']:
-	GHA[var]['threshold'][model]=GHA[var]['RCP2.6']['models'][model][0,:,:].copy()*np.nan
+	GHA[var]['threshold'][model]=GHA[var]['rcp2p6']['models'][model][0,:,:].copy()*np.nan
 	for y in range(GHA[var]['climatology'][model].shape[1]):
 		for x in range(GHA[var]['climatology'][model].shape[2]):
 			if np.isfinite(GHA[var]['warm_season'][model][0,y,x]):
 				relevant_time_indices=np.where((GHA['support']['year']>start_year) & (GHA['support']['year']<=start_year+20) \
 							& ((GHA['support']['month'] == GHA[var]['warm_season'][model][0,y,x]) | (GHA['support']['month'] == GHA[var]['warm_season'][model][1,y,x]) | (GHA['support']['month'] == GHA[var]['warm_season'][model][2,y,x])) \
-							& (np.isfinite(GHA[var]['RCP2.6']['models'][model][:,y,x])))[0]
-				relevant_values=np.ma.getdata(GHA[var]['RCP2.6']['models'][model][relevant_time_indices,y,x])
+							& (np.isfinite(GHA[var]['rcp2p6']['models'][model][:,y,x])))[0]
+				relevant_values=np.ma.getdata(GHA[var]['rcp2p6']['models'][model][relevant_time_indices,y,x])
 				GHA[var]['threshold'][model][y,x]=np.mean(relevant_values) + 2 * np.std(relevant_values)
 
 # plot treshold
@@ -164,7 +146,7 @@ if True:
 	for model in GHA['support']['model_names']:
 		Z=GHA[var]['threshold'][model].copy()-273.15
 		Z[Z==0]=np.nan
-		ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=plt.cm.YlOrBr,color_range=[29,35],color_label=None,subtitle='')
+		ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=plt.cm.YlOrBr,color_range=[29,35],color_label=None,subtitle='')
 		ax.set_title(model)
 		count+=1
 
@@ -178,8 +160,8 @@ if True:
 	plt.clf()
 
 # get exposure
-GHA[var]['exposure']={'RCP2.6':{'models':{}},'RCP8.5':{'models':{}}}
-for rcp in ['RCP2.6','RCP8.5']:
+GHA[var]['exposure']={'rcp2p6':{'models':{}},'rcp8p5':{'models':{}}}
+for rcp in ['rcp2p6','rcp8p5']:
 	for model in GHA['support']['model_names']:
 		GHA[var]['exposure'][rcp]['models'][model]={}
 		for period in GHA['support']['periods']:
@@ -196,14 +178,14 @@ for rcp in ['RCP2.6','RCP8.5']:
 
 # plot exposure
 if True:
-	for rcp in ['RCP2.6','RCP8.5']:
+	for rcp in ['rcp2p6','rcp8p5']:
 		fig,axes=plt.subplots(nrows=3,ncols=6,figsize=(10,6))
 		count=0
 		for period in ['ref','2030s','2040s']:
 			for model in GHA['support']['model_names']:
 				Z=GHA['tas']['exposure'][rcp]['models'][model][period].copy()
 				Z[Z==0]=np.nan
-				ax,im=plot_map(axes.flatten()[count],lons,lats,Z*100,color_type=plt.cm.YlOrBr,color_range=[0,50],color_label=None,subtitle='')
+				ax,im=plot_map(axes.flatten()[count],lon,lat,Z*100,color_type=plt.cm.YlOrBr,color_range=[0,50],color_label=None,subtitle='')
 				if period=='2030s':							ax.set_title(model)
 				if model==GHA['support']['model_names'][0]:	ax.set_ylabel(period)
 				count+=1
@@ -222,8 +204,8 @@ if True:
 		plt.clf()
 
 #exposure diff
-GHA[var]['exposure_diff']={'RCP2.6':{'models':{}},'RCP8.5':{'models':{}}}	
-for rcp in ['RCP2.6','RCP8.5']:
+GHA[var]['exposure_diff']={'rcp2p6':{'models':{}},'rcp8p5':{'models':{}}}	
+for rcp in ['rcp2p6','rcp8p5']:
 	GHA[var][rcp]['period_diff']={}
 	for model in GHA['support']['model_names']:
 		GHA[var]['exposure_diff'][rcp]['models'][model]={}
@@ -232,7 +214,7 @@ for rcp in ['RCP2.6','RCP8.5']:
 				GHA[var]['exposure_diff'][rcp]['models'][model][period]=GHA[var]['exposure'][rcp]['models'][model][period]-GHA[var]['exposure'][rcp]['models'][model]['ref']
 
 # ensemble mean
-for rcp in ['RCP2.6','RCP8.5']:
+for rcp in ['rcp2p6','rcp8p5']:
 	GHA[var]['exposure_diff'][rcp]['ensemble_mean']={}
 	for period in GHA['support']['periods']:
 		if period!='ref':
@@ -242,7 +224,7 @@ for rcp in ['RCP2.6','RCP8.5']:
 			GHA[var]['exposure_diff'][rcp]['ensemble_mean'][period]/=5
 
 # agreement
-for rcp in ['RCP2.6','RCP8.5']:
+for rcp in ['rcp2p6','rcp8p5']:
 	GHA[var]['exposure_diff'][rcp]['agreement']={}
 	for period in GHA['support']['periods']:
 		if period!='ref':
@@ -251,7 +233,7 @@ for rcp in ['RCP2.6','RCP8.5']:
 				GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.sign(GHA[var]['exposure_diff'][rcp]['models'][model][period])==np.sign(GHA[var]['exposure_diff'][rcp]['ensemble_mean'][period]))]+=1
 			GHA[var]['exposure_diff'][rcp]['agreement'][period][GHA[var]['exposure_diff'][rcp]['agreement'][period]>3]=np.nan
 			GHA[var]['exposure_diff'][rcp]['agreement'][period][np.isnan(GHA[var]['exposure_diff'][rcp]['agreement'][period])==False]=0.5
-			GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.isfinite(GHA[var][rcp]['models'][model][0,:,:])==False)[0]]=np.nan
+			GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.isfinite(GHA[var]['exposure_diff'][rcp]['ensemble_mean'][period][:,:])==False)[0]]=np.nan
 
 # extreme hot events
 if True:
@@ -262,7 +244,7 @@ if True:
 			Z=GHA['tas']['exposure_diff'][rcp_str[rcp]]['ensemble_mean'][period].copy()*100
 			Z[Z==0]=np.nan
 			print rcp_str[rcp],period,np.mean(np.ma.masked_invalid(Z)),np.min(np.ma.masked_invalid(Z)),np.max(np.ma.masked_invalid(Z))
-			ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=rvb,color_range=[-20,80],color_label=None,subtitle='',grey_area=GHA['tas']['exposure_diff'][rcp_str[rcp]]['agreement'][period])
+			ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=risk,color_range=[-20,80],color_label=None,subtitle='',grey_area=GHA['tas']['exposure_diff'][rcp_str[rcp]]['agreement'][period])
 			if period=='2030s':	ax.set_ylabel(rcp_names[rcp])
 			if rcp==0:	ax.set_title(period)
 			count+=1

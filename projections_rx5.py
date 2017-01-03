@@ -90,54 +90,6 @@ rcp_str=['rcp2p6','rcp8p5']
 risk = make_colormap([col_conv('green'), col_conv('white'), 0.2, col_conv('white'), col_conv('yellow'), 0.4, col_conv('yellow'), col_conv('orange'), 0.6, col_conv('orange'), col_conv('red'), 0.8, col_conv('red'), col_conv('violet')])
 month_color = mpl.colors.ListedColormap(sns.color_palette("cubehelix", 12))
 
-fig,axes=plt.subplots(nrows=3,ncols=5,figsize=(15,15))
-Z=GHA[var][rcp]['ensemble_mean'][6,:,:].copy()
-Z[3,3]=np.nan
-Z[4,2]=np.nan
-ax,im=plot_map(axes[0,3],lon,lat,Z,color_type=month_color,color_range=[30,50],color_label=None,subtitle='')
-plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
-plt.clf()
-
-
-m = Basemap(llcrnrlon=-3.25,llcrnrlat=4.75,urcrnrlon=1.25,urcrnrlat=11.25,projection='cyl',resolution='i')
-
-im = m.imshow(Z[::-1,:],risk,interpolation='none',vmin=30,vmax=50)
-
-m.drawcoastlines()
-m.drawstates()
-m.drawcountries()
-
-plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
-plt.clf()
-
-
-# transform to nx x ny regularly spaced 5km native projection grid
-nx = int((m.xmax-m.xmin)/5000.)+1; ny = int((m.ymax-m.ymin)/5000.)+1
-topodat = m.transform_scalar(topoin,lons,lats,nx,ny)
-# plot image over map with imshow.
-im = m.imshow(topodat,cm.GMT_haxby)
-
-
-
-from mpl_toolkits.basemap import Basemap, shiftgrid, cm
-import numpy as np
-import matplotlib.pyplot as plt
-from netCDF4 import Dataset
-
-# read in etopo5 topography/bathymetry.
-url = 'http://ferret.pmel.noaa.gov/thredds/dodsC/data/PMEL/etopo5.nc'
-etopodata = Dataset(url)
-
-
-topoin = etopodata.variables['ROSE'][:]
-lons = etopodata.variables['ETOPO05_X'][:]
-lats = etopodata.variables['ETOPO05_Y'][:]
-
-
-
-
-xydata = m.transform_scalar(Z[::-1,:].flatten(),lon,lat[::-1],14,18) 
-
 #####################
 # extreme wet events
 #####################
@@ -167,7 +119,7 @@ if True:
 		for model in GHA['support']['model_names']:
 			Z=GHA[var]['wet_season'][model][mon,:,:].copy()
 			Z[Z==0]=np.nan
-			ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=month_color,color_range=[1,12],color_label=None,subtitle='')
+			ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=month_color,color_range=[1,12],color_label=None,subtitle='')
 			ax.set_title(model)
 			count+=1
 
@@ -202,7 +154,7 @@ if True:
 	for model in GHA['support']['model_names']:
 		Z=GHA[var]['threshold'][model].copy()
 		Z[Z==0]=np.nan
-		ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=plt.cm.YlOrBr,color_range=[80,150],color_label=None,subtitle='')
+		ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=plt.cm.YlOrBr,color_range=[80,150],color_label=None,subtitle='')
 		ax.set_title(model)
 		count+=1
 
@@ -243,7 +195,7 @@ if True:
 			for model in GHA['support']['model_names']:
 				Z=GHA[var]['exposure'][rcp]['models'][model][period].copy()
 				Z[Z==0]=np.nan
-				ax,im=plot_map(axes.flatten()[count],lons,lats,Z*100,color_type=plt.cm.YlOrBr,color_range=[0,20],color_label=None,subtitle='')
+				ax,im=plot_map(axes.flatten()[count],lon,lat,Z*100,color_type=plt.cm.YlOrBr,color_range=[0,20],color_label=None,subtitle='')
 				if period=='ref':							ax.set_title(model)
 				if model==GHA['support']['model_names'][0]:	ax.set_ylabel(period)
 				count+=1
@@ -280,7 +232,7 @@ if True:
 			for model in GHA['support']['model_names']:
 				Z=GHA[var]['exposure_diff'][rcp]['models'][model][period].copy()
 				Z[Z==0]=np.nan
-				ax,im=plot_map(axes.flatten()[count],lons,lats,Z*100,color_type=plt.cm.PiYG,color_range=[-10,10],color_label=None,subtitle='')
+				ax,im=plot_map(axes.flatten()[count],lon,lat,Z*100,color_type=plt.cm.PiYG,color_range=[-10,10],color_label=None,subtitle='')
 				if period=='2030s':							ax.set_title(model)
 				if model==GHA['support']['model_names'][0]:	ax.set_ylabel(period)
 				count+=1
@@ -314,14 +266,12 @@ for rcp in ['rcp2p6','rcp8p5']:
 	for period in GHA['support']['periods']:
 		if period!='ref':
 			GHA[var]['exposure_diff'][rcp]['agreement'][period]=GHA[var]['exposure_diff'][rcp]['models'][GHA['support']['model_names'][0]][period].copy()*0
-			print np.ma.getdata(GHA[var]['exposure_diff'][rcp]['agreement'][period])
 			for model in GHA['support']['model_names']:
 				GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.sign(GHA[var]['exposure_diff'][rcp]['models'][model][period])==np.sign(GHA[var]['exposure_diff'][rcp]['ensemble_mean'][period]))]+=1
-			print np.ma.getdata(GHA[var]['exposure_diff'][rcp]['agreement'][period])
 			GHA[var]['exposure_diff'][rcp]['agreement'][period][GHA[var]['exposure_diff'][rcp]['agreement'][period]>3]=np.nan
 			GHA[var]['exposure_diff'][rcp]['agreement'][period][np.isnan(GHA[var]['exposure_diff'][rcp]['agreement'][period])==False]=0.5
-			#GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.isfinite(GHA[var][rcp]['models'][model][10,:,:])==False)[0]]=np.nan
-			print np.ma.getdata(GHA[var]['exposure_diff'][rcp]['agreement'][period])
+			GHA[var]['exposure_diff'][rcp]['agreement'][period][np.where(np.isfinite(GHA[var]['exposure_diff'][rcp]['ensemble_mean'][period][:,:])==False)[0]]=np.nan
+
 
 # plot extreme wet events
 if True:
@@ -332,7 +282,7 @@ if True:
 			Z=GHA[var]['exposure_diff'][rcp_str[rcp]]['ensemble_mean'][period].copy()*100
 			Z[Z==0]=np.nan
 			print rcp_str[rcp],period,np.mean(np.ma.masked_invalid(Z)),np.min(np.ma.masked_invalid(Z)),np.max(np.ma.masked_invalid(Z))
-			ax,im=plot_map(axes.flatten()[count],lons,lats,Z,color_type=risk,color_range=[-2.5,10],color_label=None,subtitle='',grey_area=GHA[var]['exposure_diff'][rcp_str[rcp]]['agreement'][period])
+			ax,im=plot_map(axes.flatten()[count],lon,lat,Z,color_type=risk,color_range=[-2.5,10],color_label=None,subtitle='',grey_area=GHA[var]['exposure_diff'][rcp_str[rcp]]['agreement'][period])
 			if period=='2030s':	ax.set_ylabel(rcp_names[rcp])
 			if rcp==0:	ax.set_title(period)
 			count+=1
