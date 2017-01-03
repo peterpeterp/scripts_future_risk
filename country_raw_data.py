@@ -3,8 +3,8 @@ from netCDF4 import Dataset
 import os,sys
 import glob
 
-os.chdir('/home/pepflei/CA/allgemeine_scripte')
-sys.path.append('/home/pepflei/CA/allgemeine_scripte')
+os.chdir('/home/pepflei/CA/Scripts/allgemeine_scripte')
+sys.path.append('/home/pepflei/CA/Scripts/allgemeine_scripte')
 from country_zoom import *
 from country_average import *
 os.chdir('/home/pepflei/CA')
@@ -46,9 +46,10 @@ if job_id==2:
 	rcps=['rcp2p6','rcp8p5']
 	for rcp in range(2):
 		all_files=glob.glob('/p/projects/tumble/carls/shared_folder/rx5/mon_rx5_*'+rcps[rcp]+'*')
+		all_files=glob.glob('/p/projects/tumble/carls/shared_folder/rx5/R_rx5/mon_rx5_*'+rcps[rcp]+'*')
 		for file in all_files:
-			country_zoom(in_file=file,out_file='/home/pepflei/CA/data/country_data/'+iso+'/raw/CMIP5/'+RCPs[rcp]+'/'+file.split('/')[-1].replace('.nc4','_'+iso+'.nc4'),var='rx5',iso=iso,mask_path='/home/pepflei/CA/masks/')
-			country_average(in_file=file,out_file='/home/pepflei/CA/data/country_data/'+iso+'/raw/CMIP5/'+RCPs[rcp]+'/'+file.split('/')[-1].replace('.nc4','_'+iso+'.csv'),var='rx5',mask_files=['/home/pepflei/CA/masks/720x360/sov_2015_africa.nc'],countries=[iso])
+			country_zoom(in_file=file,out_file='/home/pepflei/CA/data/country_data/'+iso+'/raw/CMIP5/'+RCPs[rcp]+'/'+file.split('/')[-1].replace('.nc4','_'+iso+'_month_cut.nc4'),var='rx5',iso=iso,mask_path='/home/pepflei/CA/masks/')
+			country_average(in_file=file,out_file='/home/pepflei/CA/data/country_data/'+iso+'/raw/CMIP5/'+RCPs[rcp]+'/'+file.split('/')[-1].replace('.nc4','_'+iso+'_month_cut.csv'),var='rx5',mask_files=['/home/pepflei/CA/masks/720x360/sov_2015_africa.nc'],countries=[iso])
 
 if job_id==3:
 	# CMIP5 spei 12m
