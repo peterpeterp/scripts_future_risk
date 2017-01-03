@@ -82,29 +82,61 @@ for var in ['rx5']:
 # plot settings
 ###############
 lon=GHA['support']['lon'].copy()
-step=np.diff(lon,1)[0]
-lon-=step/2
-lon=np.append(lon,np.array(lon[-1]+step))
-
 lat=GHA['support']['lat'].copy()
-step=np.diff(lat,1)[0]
-lat-=step/2
-lat=np.append(lat,lat[-1]+step)
-
-lons, lats = np.meshgrid(lon,lat)
-
-# fig,axes=plt.subplots(nrows=3,ncols=5,figsize=(7,6))
-# ax,im=plot_map(axes[0,3],lons,lats,Z,color_type=month_color,color_range=[1,12],color_label=None,subtitle='')
-# ax.set_aspect(1.)
-# plt.show()
-# #fig.tight_layout()
-# plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
 
 rcp_names=['low warming','high warming']
 rcp_str=['rcp2p6','rcp8p5']
 
 risk = make_colormap([col_conv('green'), col_conv('white'), 0.2, col_conv('white'), col_conv('yellow'), 0.4, col_conv('yellow'), col_conv('orange'), 0.6, col_conv('orange'), col_conv('red'), 0.8, col_conv('red'), col_conv('violet')])
 month_color = mpl.colors.ListedColormap(sns.color_palette("cubehelix", 12))
+
+fig,axes=plt.subplots(nrows=3,ncols=5,figsize=(15,15))
+Z=GHA[var][rcp]['ensemble_mean'][6,:,:].copy()
+Z[3,3]=np.nan
+Z[4,2]=np.nan
+ax,im=plot_map(axes[0,3],lon,lat,Z,color_type=month_color,color_range=[30,50],color_label=None,subtitle='')
+plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
+plt.clf()
+
+
+m = Basemap(llcrnrlon=-3.25,llcrnrlat=4.75,urcrnrlon=1.25,urcrnrlat=11.25,projection='cyl',resolution='i')
+
+im = m.imshow(Z[::-1,:],risk,interpolation='none',vmin=30,vmax=50)
+
+m.drawcoastlines()
+m.drawstates()
+m.drawcountries()
+
+plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_test.png')
+plt.clf()
+
+
+# transform to nx x ny regularly spaced 5km native projection grid
+nx = int((m.xmax-m.xmin)/5000.)+1; ny = int((m.ymax-m.ymin)/5000.)+1
+topodat = m.transform_scalar(topoin,lons,lats,nx,ny)
+# plot image over map with imshow.
+im = m.imshow(topodat,cm.GMT_haxby)
+
+
+
+from mpl_toolkits.basemap import Basemap, shiftgrid, cm
+import numpy as np
+import matplotlib.pyplot as plt
+from netCDF4 import Dataset
+
+# read in etopo5 topography/bathymetry.
+url = 'http://ferret.pmel.noaa.gov/thredds/dodsC/data/PMEL/etopo5.nc'
+etopodata = Dataset(url)
+
+
+topoin = etopodata.variables['ROSE'][:]
+lons = etopodata.variables['ETOPO05_X'][:]
+lats = etopodata.variables['ETOPO05_Y'][:]
+
+
+
+
+xydata = m.transform_scalar(Z[::-1,:].flatten(),lon,lat[::-1],14,18) 
 
 #####################
 # extreme wet events
@@ -315,6 +347,7 @@ if True:
 	plt.savefig('/Users/peterpfleiderer/Documents/Projects/WB_DRM/plots/'+iso+'/'+iso+'_'+var+'_exposure_diff'+tag+'.png')
 
 
+# plot increase
 
 
 
